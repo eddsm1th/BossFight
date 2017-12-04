@@ -14,6 +14,9 @@ function preload(){
 	game.load.image('healthBar', 'assets/healthBar.png');
 	game.load.image('maxHealthBar', 'assets/healthBarMax.png');
 	game.load.image('attack', 'assets/attackHitBox.png');
+	game.load.image('boss', 'assets/Boss.png');
+	game.load.image('enemy', 'assets/Enemy.png');
+	game.load.image('heart', 'assets/Heart.png');
 }
 
 var platforms;
@@ -37,15 +40,15 @@ function create(){
 	ledges = game.add.group();
 	ledges.enableBody = true;
 
-	ledge2 = ledges.create(400, 590, 'platform');
+	ledge2 = ledges.create(500, 590, 'platform');
 	ledge2.body.immovable = true;
-	
-	
 
 	player = game.add.sprite(200, 200, 'player');
 	game.physics.arcade.enable(player);
 	player.body.gravity.y = 4000;
 	player.body.collideWorldBounds = true;
+
+	attack = game.add.sprite(-40, -40, 'attack');
 
 
 	//DAMAGE BLOCKS
@@ -61,12 +64,29 @@ function create(){
 	boulder3 = attacks.create(-200, -200, 'dmg2');
 	boulder4 = attacks.create(-200, -200, 'dmg2');
 
+	//BOSS
+
+	boss = game.add.sprite(1100, 490, 'boss');
+	game.physics.arcade.enable(boss);
+
+	//ENEMIES
+
+	enemy = game.add.sprite(700, 676, 'enemy');
+	game.physics.arcade.enable(enemy);
+	enemy.body.gravity.y = 4000;
+	enemy.body.collideWorldBounds = true;
 
 	//PLAYER STATS
 
 	maxHealthBar = game.add.sprite(20, 20, 'maxHealthBar');
 	healthBar = game.add.sprite(20, 20, 'healthBar');
 
+	bossMaxHealthBar = game.add.sprite(1180, 20, 'maxHealthBar');
+	bossHealthBar = game.add.sprite(1180, 20, 'healthBar');
+
+	heart = game.add.sprite(0, 0, 'heart');
+
+	//CONTROLS
 
 	jumpButton = game.input.keyboard.addKey(Phaser.Keyboard.SPACEBAR);
 	leftButton = game.input.keyboard.addKey(Phaser.Keyboard.A);
@@ -92,16 +112,22 @@ var playerKnockedBack = false;
 var allowDoubleJump = false;
 var playerAttacking = false;
 
+//ENEMY VARIABLES
+
+var enemyCanJump = true;
+var enemyDirection = 0;
+var enemyKnockedBack = false;
+var enemyHealth = 200;
+
+//BOSS VARIABLES
+
+var bossMaxHealth = 5000;
+var bossHealth = bossMaxHealth;
 
 function update(){
 
-	if ( damageBlock.exists ) {
-		if(damageBlock.body.position.x == damageBlock.width * -1){
-			damageBlock.kill();
-		}		
-	}
-
 	if ( attackButton.isDown && canAttack == true ) {
+		attack.kill();
 
 		canAttack = false;
 		controlable = false;
@@ -118,14 +144,21 @@ function update(){
 			attack.position.x = player.body.position.x - attack.width;
 		}
 
-		setTimeout(function(){
-			attack.kill();
 
+		setTimeout(function(){
+			attack.position.x = 0;
+			attack.position.y = 0;
+			
 			canAttack = true;
 			controlable = true;
 			playerAttacking = false;
-		}, 300)
-	}  
+		}, 150)
+	}
+	
+
+	var boulderOneBounce = game.physics.arcade.collide(boulder1, ledges);
+	var boulderTwoBounce = game.physics.arcade.collide(boulder2, ledges);
+	var boulderThreeBounce = game.physics.arcade.collide(boulder3, ledges);
 
 	//PLAYER CONTROLS
 	var onGround = game.physics.arcade.collide(player, ground);
@@ -194,35 +227,86 @@ function update(){
 		}
 	}
 
+
+	//PLAYER TAKING DAMAGE
+
 	if ( damagable ) {
+
 		if ( checkOverlap(player, damageBlock) ) {
-			playerTakeDamage(236, -600, -900);
+			playerTakeDamage(194, -600, -900);
 		}
 
 		if ( checkOverlap(player, boulder1) || checkOverlap(player, boulder2) || checkOverlap(player, boulder3) || checkOverlap(player, boulder4) ) {
 			playerTakeDamage(112, -800, -1200);
 		}
+
+		if ( checkOverlap(player, boss) ) {
+			playerTakeDamage(156, -200, -1200);
+		}
+
+		if ( checkOverlap(player, enemy) ) {
+			playerTakeDamage(58, -500, -500);
+		}
+
 	}
 
 
 	//ENEMY AI
+	var enemyOnGround = game.physics.arcade.collide(enemy, ground);
 
+	if ( enemyOnGround ) {
+		if ( enemyKnockedBack ) {
+			enemyKnockedBack = false;
+			enemyCanMove = true;
+		}
+	}
+
+	if ( player.position.x < enemy.position.x && enemyCanMove ) {
+		enemy.body.velocity.x = -150;
+		enemyDirection = -1;
+	} else if ( player.position.x > enemy.position.x && enemyCanMove ) {
+		enemy.body.velocity.x = 150;
+		enemyDirection = 1;
+	}
+
+	if ( player.position.y + 80 < enemy.position.y && enemyOnGround && enemyCanJump && enemyCanMove ) {
+
+		enemy.body.velocity.y = -700;
+		enemyCanJump = false;
+
+		setTimeout(function(){
+			enemyCanJump = true;
+		}, 1500)
+	}
+
+	//ATTACK REGISTRATIONS
+
+	if ( checkOverlap(attack, enemy) ) {
+		enemyTakeDamage();
+	}
+
+	if ( checkOverlap(attack, boss) ) {
+		bossTakeDamage();
+	}
+
+	//HEART PICKUP
+
+	if ( checkOverlap(player, heart) ) {
+		pickupHeart();
+	}
 }
-140
 
 function getBossAttack(){
 	var atkID;
 
-	console.log('    GETTING BOSS ATTACK')
-	atkID = Math.floor(Math.random() * 2);
-	// atkID = 1;
+	atkID = Math.floor(Math.random() * 3);
 
 	if ( atkID == 0) {
-		console.log('WAVE ATTACK');
 		attackOne();
 	} else if ( atkID == 1 ) {
-		console.log('BOULDER ATTACK');
 		attackTwo();
+	} else if ( atkID == 2 ) {
+		attackThree();
 	}
 }
 
@@ -259,6 +343,7 @@ function attackTwo(){
 		if ( boulderOneCanMove ) {
 			boulder1.body.velocity.y = getRandVelocity();
 			boulder1.body.velocity.x = getRandVelocity();
+			boulder1.body.bounce.set(0.4);
 			boulderOneCanMove = false;		
 		}
 
@@ -267,6 +352,7 @@ function attackTwo(){
 		if ( boulderTwoCanMove ) {
 			boulder2.body.velocity.y = getRandVelocity();
 			boulder2.body.velocity.x = getRandVelocity();
+			boulder2.body.bounce.set(0.4);
 			boulderTwoCanMove = false;		
 		}
 	
@@ -275,15 +361,8 @@ function attackTwo(){
 		if ( boulderThreeCanMove ) {
 			boulder3.body.velocity.y = getRandVelocity();
 			boulder3.body.velocity.x = getRandVelocity();
+			boulder3.body.bounce.set(0.4);
 			boulderThreeCanMove = false;		
-		}
-
-	boulder4 = attacks.create(1200, 648, 'dmg2');
-		boulder4.body.gravity.y = 2000;
-		if ( boulderFourCanMove ) {
-			boulder4.body.velocity.y = getRandVelocity() * 1.2;
-			boulder4.body.velocity.x = getRandVelocity();
-			boulderFourCanMove = false;		
 		}
 
 	game.time.events.add(5000, function(){
@@ -293,6 +372,25 @@ function attackTwo(){
 		boulderFourCanMove = true;
 		getBossAttack();
 	})
+}
+
+function attackThree(){
+	boss.body.velocity.x = -400;
+
+	setTimeout(function(){
+		boss.body.velocity.x = 400;
+
+		setTimeout(function(){
+			boss.body.velocity.x = 0;
+
+			setTimeout(function(){
+				getBossAttack();
+			}, 5000)
+
+		}, 2700)
+
+	}, 2700)
+
 }
 
 function getRandVelocity(){
@@ -342,8 +440,6 @@ function playerKnockback(knockbackX, knockbackY){
 	player.body.velocity.x = knockbackX;
 	player.body.velocity.y = knockbackY;
 
-	console.log('New velocityY: ' + player.body.velocity.y);
-
 	setTimeout(function(){
 		playerKnockedBack = true;
 	}, 100)
@@ -355,4 +451,100 @@ function canLedge(delay){
 	setTimeout(function(){
 		allowLedge = true;
 	}, delay)
+}
+
+var enemyCanMove = true;
+var enemyCanTakeDamage = true;
+
+function enemyTakeDamage(){
+	if ( enemyCanTakeDamage ) {
+		enemyHealth -= 80 + (Math.random() * 20) - 10;
+		enemyCanTakeDamage = false
+	}
+
+	enemyKnockBack();
+
+	setTimeout(function(){
+		enemyCanTakeDamage = true;
+	}, 500)
+
+	if ( enemyHealth <= 0 ) {
+		spawnHeart();
+
+		enemy.body.gravity.y = 0;
+		enemy.position.x = 1400;
+		enemy.position.y = 0;
+
+		setTimeout(function(){
+			getNewEnemy();
+		}, 10000)
+	}
+}
+
+function spawnHeart(){
+	heart.kill();
+	heart = game.add.sprite(enemy.position.x, enemy.position.y, 'heart');
+}
+
+function getNewEnemy(){
+	enemyHealth = 200;
+
+	enemy.body.gravity.y = 4000;
+}
+
+function enemyKnockBack(){
+	enemyCanMove = false;
+	
+	if ( enemyDirection == -1 ) {
+		enemy.body.velocity.x = 500;	
+	} else {
+		enemy.body.velocity.x = -500;
+	}
+	enemy.body.velocity.y = -500;
+
+	setTimeout(function(){
+		enemyKnockedBack = true;
+	}, 100)
+}
+
+var bossCanTakeDamage = true;
+
+function bossTakeDamage(){
+	if ( bossCanTakeDamage ) {
+		bossHealth -= 80 + (Math.random() * 20) - 10;
+		bossCanTakeDamage = false;
+		console.log("    BOSS CAN'T TAKE DAMAGE");
+
+		setBossHealth();
+
+		setTimeout(function(){
+			console.log("BOSS CAN TAKE DAMAGE");
+			bossCanTakeDamage = true;
+		}, 500)
+	}
+	
+	console.log(bossHealth);	
+}
+
+function setBossHealth(){
+	healthPercent = bossHealth/bossMaxHealth;
+
+	if ( healthPercent < 0 ) {
+		healthPercent = 0;
+	}
+
+	bossHealthBar.scale.setTo(healthPercent, 1);
+}
+
+function pickupHeart(){
+	playerHealth += 100;
+
+	if ( playerHealth > playerMaxHealth ) {
+		playerHealth = playerMaxHealth
+	}
+
+	setPlayerHealth();
+
+	heart.position.x = 0;
+	heart.position.y = 0;
 }
