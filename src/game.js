@@ -17,6 +17,7 @@ function preload(){
 	game.load.image('boss', 'assets/Boss.png');
 	game.load.image('enemy', 'assets/Enemy.png');
 	game.load.image('heart', 'assets/Heart.png');
+	game.load.image('statborder', 'assets/statBackground.png')
 }
 
 var platforms;
@@ -43,6 +44,13 @@ function create(){
 	ledge2 = ledges.create(500, 590, 'platform');
 	ledge2.body.immovable = true;
 
+	//BOSS
+
+	boss = game.add.sprite(1100, 490, 'boss');
+	game.physics.arcade.enable(boss);
+
+	//PLAYER
+
 	player = game.add.sprite(200, 200, 'player');
 	game.physics.arcade.enable(player);
 	player.body.gravity.y = 4000;
@@ -64,10 +72,6 @@ function create(){
 	boulder3 = attacks.create(-200, -200, 'dmg2');
 	boulder4 = attacks.create(-200, -200, 'dmg2');
 
-	//BOSS
-
-	boss = game.add.sprite(1100, 490, 'boss');
-	game.physics.arcade.enable(boss);
 
 	//ENEMIES
 
@@ -78,11 +82,17 @@ function create(){
 
 	//PLAYER STATS
 
-	maxHealthBar = game.add.sprite(20, 20, 'maxHealthBar');
-	healthBar = game.add.sprite(20, 20, 'healthBar');
+	maxHealthBar = game.add.sprite(17, 17, 'statborder');
+	healthBar = game.add.sprite(20, 20, 'maxHealthBar');
 
-	bossMaxHealthBar = game.add.sprite(1180, 20, 'maxHealthBar');
-	bossHealthBar = game.add.sprite(1180, 20, 'healthBar');
+	maxstaminaBar = game.add.sprite(17, 37, 'statborder');
+	staminaBar = game.add.sprite(20, 40, 'healthBar');
+
+	bossMaxHealthBar = game.add.sprite(1027, 17, 'statborder');
+	bossMaxHealthBar.scale.setTo(2, 1);
+	bossHealthBar = game.add.sprite(1030, 20, 'maxHealthBar');
+	bossHealthBar.scale.setTo(2.04, 1);
+
 
 	heart = game.add.sprite(0, 0, 'heart');
 
@@ -104,8 +114,12 @@ function create(){
 var allowLedge = false;
 var damagable = true;
 var controlable = true;
+
 var playerMaxHealth = 1000
 var playerHealth = playerMaxHealth;
+var playerMaxStamina = 1000;
+var playerStamina = playerMaxStamina;
+
 var direction;
 var canAttack = true;
 var playerKnockedBack = false;
@@ -123,10 +137,11 @@ var enemyHealth = 200;
 
 var bossMaxHealth = 5000;
 var bossHealth = bossMaxHealth;
+var charging = false;
 
 function update(){
 
-	if ( attackButton.isDown && canAttack == true ) {
+	if ( attackButton.isDown && canAttack ) {
 		attack.kill();
 
 		canAttack = false;
@@ -181,6 +196,7 @@ function update(){
 		if ( playerKnockedBack ) {
 			player.body.velocity.x = 0;
 
+			canAttack = true;
 			controlable = true;
 			playerKnockedBack = false;
 		}
@@ -240,7 +256,7 @@ function update(){
 			playerTakeDamage(112, -800, -1200);
 		}
 
-		if ( checkOverlap(player, boss) ) {
+		if ( checkOverlap(player, boss) && charging ) {
 			playerTakeDamage(156, -200, -1200);
 		}
 
@@ -315,12 +331,12 @@ var attackOneCount = 1;
 function attackOne(){
 	damageBlock.kill();
 	damageBlock = attacks.create(1200, 648, 'dmg');
-	damageBlock.body.velocity.x = -1600;
+	damageBlock.body.velocity.x = -1200;
 
 	attackOneCount ++;
 
 	if ( attackOneCount <= 3 ) {
-		game.time.events.add(1000, function(){
+		game.time.events.add(1250, function(){
 			attackOne();
 		})
 	} else {
@@ -375,21 +391,28 @@ function attackTwo(){
 }
 
 function attackThree(){
-	boss.body.velocity.x = -400;
 
 	setTimeout(function(){
-		boss.body.velocity.x = 400;
+		charging = true;
 
+		boss.body.velocity.x = -400;
 		setTimeout(function(){
-			boss.body.velocity.x = 0;
+			boss.body.velocity.x = 400;
 
 			setTimeout(function(){
-				getBossAttack();
-			}, 5000)
+				boss.body.velocity.x = 0;
+
+				charging = false
+
+				setTimeout(function(){
+					getBossAttack();
+				}, 5000)
+
+			}, 2700)
 
 		}, 2700)
 
-	}, 2700)
+	},2700)
 
 }
 
@@ -434,6 +457,7 @@ function playerKnockback(knockbackX, knockbackY){
 
 	// allowLedge = false;
 	controlable = false;
+	canAttack = false;
 
 	// player.body.velocity.y = 0;
 
@@ -520,7 +544,7 @@ function bossTakeDamage(){
 		setTimeout(function(){
 			console.log("BOSS CAN TAKE DAMAGE");
 			bossCanTakeDamage = true;
-		}, 500)
+		}, 200)
 	}
 	
 	console.log(bossHealth);	
@@ -533,7 +557,7 @@ function setBossHealth(){
 		healthPercent = 0;
 	}
 
-	bossHealthBar.scale.setTo(healthPercent, 1);
+	bossHealthBar.scale.setTo(healthPercent*2, 1);
 }
 
 function pickupHeart(){
