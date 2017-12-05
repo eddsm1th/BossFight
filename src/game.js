@@ -5,7 +5,7 @@ var game = new Phaser.Game(1400, 800, Phaser.CANVAS, '', { preload: preload, cre
 game.debugMode = true;
 
 function preload(){
-	game.load.image('player', 'assets/pokeball.png');
+	game.load.image('player', 'assets/knight.png');
 	game.load.image('background', 'assets/background.jpg');
 	game.load.image('ground', 'assets/ground.png');
 	game.load.image('platform', 'assets/platform.png');
@@ -18,6 +18,8 @@ function preload(){
 	game.load.image('enemy', 'assets/Enemy.png');
 	game.load.image('heart', 'assets/Heart.png');
 	game.load.image('statborder', 'assets/statBackground.png')
+
+	game.load.spritesheet('player_idle', 'assets/spriteSheets/knight_idle.png', 63, 69, 9);
 }
 
 var platforms;
@@ -51,10 +53,14 @@ function create(){
 
 	//PLAYER
 
-	player = game.add.sprite(200, 200, 'player');
+	player = game.add.sprite(200, 200, 'player_idle');
 	game.physics.arcade.enable(player);
 	player.body.gravity.y = 4000;
 	player.body.collideWorldBounds = true;
+
+	player.animations.add('idle');
+
+	player.animations.play('idle', 10, true);
 
 	attack = game.add.sprite(-40, -40, 'attack');
 
